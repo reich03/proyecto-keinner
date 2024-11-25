@@ -14,5 +14,6 @@ require_once("./core/database.php");
 require_once("./core/model.php");
 require_once("./core/view.php");
 require_once("./config/config.php");
+require_once __DIR__ . '/../ConsultSnies/vendor/autoload.php';
 
 $app = new App();
