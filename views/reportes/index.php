@@ -1,12 +1,12 @@
-<?php 
+<?php
 require_once "./views/components/head.php";
 ?>
 <div class="pt-[2rem] pb-[2rem] bg-gradient-to-br from-blue-100 to-blue-300 min-h-screen flex items-center">
     <div id="reporteContainer" class="container mx-auto max-w-5xl bg-white shadow-xl rounded-lg p-8 border border-gray-200">
         <div class="text-center mb-6">
-            <h2 class="text-5xl font-extrabold text-blue-600 mb-4">Reportes de Programas Académicos</h2>
+            <h2 class="text-5xl font-extrabold text-blue-600 mb-4">Programas Académicos por Nivel, Formación y Modalidad</h2>
             <p class="text-lg text-gray-700">
-                Selecciona el tipo de reporte y visualiza los datos en gráficos y tablas para analizar la información de manera interactiva.
+                Selecciona el tipo de reporte y visualiza los datos en tablas para analizar la información de manera interactiva.
             </p>
         </div>
 
@@ -17,28 +17,34 @@ require_once "./views/components/head.php";
                 <option value="nivelFormacion">Programas con Formación Universitaria, Maestría, Tecnológico y Especialización Universitaria</option>
                 <option value="modalidad">Programas por Modalidad</option>
             </select>
-            <label for="tipoGrafico" class="font-bold ml-4 mr-2 text-lg">Tipo de Gráfico:</label>
-            <select id="tipoGrafico" class="px-4 py-2 border rounded">
-                <option value="bar">Barras</option>
-                <option value="pie">Pastel</option>
-            </select>
-        </div>
-
-        <div class="flex justify-center mb-6">
-            <canvas id="reporteChart" class="w-full max-w-4xl h-auto"></canvas>
         </div>
 
         <div class="overflow-x-auto shadow rounded-lg">
-            <table id="reporteTable" class="table-auto w-full text-left border-collapse border border-gray-200 hidden">
+            <table id="reporteTable" class="table-auto w-full text-left border-collapse border border-gray-200">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700">Categoría</th>
-                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700 text-center">Total Programas</th>
+                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700 text-center">
+                            Modalidad <input type="text" id="modalidadFilter" class="w-full px-2 py-1 mt-1" placeholder="Filtrar...">
+                        </th>
+                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700">
+                            Nivel Académico / Nivel de Formación <input type="text" id="nivelFilter" class="w-full px-2 py-1 mt-1" placeholder="Filtrar...">
+                        </th>
+                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700">
+                            Programas <input type="text" id="programaFilter" class="w-full px-2 py-1 mt-1" placeholder="Filtrar...">
+                        </th>
+                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700">
+                            Municipio <input type="text" id="municipioFilter" class="w-full px-2 py-1 mt-1" placeholder="Filtrar...">
+                        </th>
+                        <th class="border border-gray-300 px-6 py-3 font-medium text-gray-700">
+                            Departamento <input type="text" id="departamentoFilter" class="w-full px-2 py-1 mt-1" placeholder="Filtrar...">
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="reporteTableBody" class="bg-white"></tbody>
             </table>
         </div>
+
+        <div id="pagination" class="mt-4 text-center"></div>
 
         <div class="text-center mt-8">
             <button onclick="exportPDF()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-medium">
@@ -48,117 +54,195 @@ require_once "./views/components/head.php";
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Incluir jsPDF desde la CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Incluir jsPDF autoTable desde la CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.18/jspdf.plugin.autotable.min.js"></script>
+
 <script>
-    const reportes = <?php echo json_encode($this->reportes); ?>;
-    console.log("Reportes recibidos:", reportes);
+    const { jsPDF } = window.jspdf;
 
     const reporteSelector = document.getElementById("reporteSelector");
-    const tipoGraficoSelector = document.getElementById("tipoGrafico");
-    const reporteTable = document.getElementById("reporteTable");
     const reporteTableBody = document.getElementById("reporteTableBody");
-    const reporteChart = document.getElementById("reporteChart").getContext("2d");
+    const modalidadFilter = document.getElementById("modalidadFilter");
+    const nivelFilter = document.getElementById("nivelFilter");
+    const programaFilter = document.getElementById("programaFilter");
+    const municipioFilter = document.getElementById("municipioFilter");
+    const departamentoFilter = document.getElementById("departamentoFilter");
+    const pagination = document.getElementById("pagination");
 
-    let chartInstance = null;
+    let programas = [];
+    let filteredProgramas = [];
+    const itemsPerPage = 10; 
+    let currentPage = 1;
 
     function actualizarReporte() {
         const reporteSeleccionado = reporteSelector.value;
-        const tipoGrafico = tipoGraficoSelector.value;
-        let categorias = [];
-        let valores = [];
-
-        if (reporteSeleccionado === "nivelAcademico") {
-            categorias = [...new Set(reportes.map(r => r.nivel_academico))];
-            valores = categorias.map(categoria => {
-                return reportes
-                    .filter(r => r.nivel_academico === categoria)
-                    .reduce((total, r) => total + parseInt(r.total_programas), 0);
-            });
-        } else if (reporteSeleccionado === "nivelFormacion") {
-            const formaciones = ["Universitario", "Maestría", "Tecnológico", "Especialización Universitaria"];
-            categorias = formaciones;
-            valores = formaciones.map(formacion => {
-                return reportes
-                    .filter(r => r.nivel_formacion === formacion)
-                    .reduce((total, r) => total + parseInt(r.total_programas), 0);
-            });
-        } else if (reporteSeleccionado === "modalidad") {
-            categorias = [...new Set(reportes.map(r => r.modalidad))];
-            valores = categorias.map(categoria => {
-                return reportes
-                    .filter(r => r.modalidad === categoria)
-                    .reduce((total, r) => total + parseInt(r.total_programas), 0);
-            });
-        }
-
-        actualizarTabla(categorias, valores);
-        actualizarGrafico(categorias, valores, tipoGrafico);
+        fetchReportes(reporteSeleccionado);
     }
 
-    function actualizarTabla(categorias, valores) {
+    function actualizarTabla(programas, page = 1) {
         reporteTableBody.innerHTML = "";
-        categorias.forEach((categoria, index) => {
+        const startIndex = (page - 1) * itemsPerPage;
+        const paginatedPrograms = programas.slice(startIndex, startIndex + itemsPerPage);
+
+        paginatedPrograms.forEach(programa => {
             const row = document.createElement("tr");
             row.classList.add("hover:bg-gray-50");
+
             row.innerHTML = `
-                <td class="border border-gray-300 px-6 py-3">${categoria}</td>
-                <td class="border border-gray-300 px-6 py-3 text-center">${valores[index]}</td>
+                <td class="border border-gray-300 px-6 py-3">${programa.modalidad}</td>
+                <td class="border border-gray-300 px-6 py-3">${programa.nivel}</td>
+                <td class="border border-gray-300 px-6 py-3">${programa.nombre_programa}</td>
+                <td class="border border-gray-300 px-6 py-3">${programa.nombre_municipio}</td>
+                <td class="border border-gray-300 px-6 py-3">${programa.nombre_departamento}</td>
             `;
             reporteTableBody.appendChild(row);
         });
-        reporteTable.classList.remove("hidden");
+
+        updatePagination(programas.length, page);
     }
 
-    function actualizarGrafico(categorias, valores, tipo) {
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
+    function updatePagination(totalItems, currentPage) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        pagination.innerHTML = '';
 
-        chartInstance = new Chart(reporteChart, {
-            type: tipo,
-            data: {
-                labels: categorias,
-                datasets: [{
-                    label: "Total Programas",
-                    data: valores,
-                    backgroundColor: tipo === "pie" ? 
-                        ["rgba(54, 162, 235, 0.6)", "rgba(255, 99, 132, 0.6)", "rgba(255, 206, 86, 0.6)", "rgba(75, 192, 192, 0.6)"] :
-                        "rgba(54, 162, 235, 0.6)",
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: tipo === "pie" ? "top" : "bottom" }
-                },
-                scales: tipo === "bar" ? { y: { beginAtZero: true } } : {}
-            }
-        });
+        const paginationHTML = `
+            <button class="mx-1 px-4 py-2 bg-blue-500 text-white rounded" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>Primera</button>
+            <button class="mx-1 px-4 py-2 bg-blue-500 text-white rounded" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Anterior</button>
+            <span class="mx-1 py-2 text-lg text-gray-700">Página ${currentPage} de ${totalPages}</span>
+            <button class="mx-1 px-4 py-2 bg-blue-500 text-white rounded" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Siguiente</button>
+            <button class="mx-1 px-4 py-2 bg-blue-500 text-white rounded" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Última</button>
+        `;
+
+        pagination.innerHTML = paginationHTML;
     }
 
-    async function exportPDF() {
-        const container = document.getElementById("reporteContainer");
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredProgramas.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
 
-        const canvas = await html2canvas(container, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-
-        const pdf = new jspdf.jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-        pdf.save("Reporte.pdf");
+        currentPage = page;
+        actualizarTabla(filteredProgramas, currentPage);
     }
+
+    function fetchReportes(tipoReporte) {
+        fetch(`http://localhost/ConsultSnies/reportes/obtenerReportes/${tipoReporte}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error al cargar los reportes:', data.error);
+                } else {
+                    programas = [];
+
+                    if (tipoReporte === 'nivelAcademico') {
+                        programas = data.map(p => ({
+                            modalidad: p.modalidad,
+                            nivel: p.nivel_academico,
+                            nombre_programa: p.nombre_programa,
+                            nombre_municipio: p.nombre_municipio,
+                            nombre_departamento: p.nombre_departamento,
+                        }));
+                    } else if (tipoReporte === 'nivelFormacion') {
+                        programas = data.map(p => ({
+                            modalidad: p.modalidad,
+                            nivel: p.nivel_formacion,
+                            nombre_programa: p.nombre_programa,
+                            nombre_municipio: p.nombre_municipio,
+                            nombre_departamento: p.nombre_departamento,
+                        }));
+                    } else if (tipoReporte === 'modalidad') {
+                        programas = data.map(p => ({
+                            modalidad: p.modalidad,
+                            nivel: '-', 
+                            nombre_programa: p.nombre_programa,
+                            nombre_municipio: p.nombre_municipio,
+                            nombre_departamento: p.nombre_departamento,
+                        }));
+                    }
+
+                    filteredProgramas = programas;
+                    actualizarTabla(filteredProgramas);
+                }
+            })
+            .catch(error => {
+                console.error('Error al obtener los reportes:', error);
+            });
+    }
+
+    function applyFilters() {
+        const modalidad = modalidadFilter.value.toLowerCase();
+        const nivel = nivelFilter.value.toLowerCase();
+        const programa = programaFilter.value.toLowerCase();
+        const municipio = municipioFilter.value.toLowerCase();
+        const departamento = departamentoFilter.value.toLowerCase();
+
+        filteredProgramas = programas.filter(p => 
+            p.modalidad.toLowerCase().includes(modalidad) &&
+            p.nivel.toLowerCase().includes(nivel) &&
+            p.nombre_programa.toLowerCase().includes(programa) &&
+            p.nombre_municipio.toLowerCase().includes(municipio) &&
+            p.nombre_departamento.toLowerCase().includes(departamento)
+        );
+
+        currentPage = 1; 
+        actualizarTabla(filteredProgramas);
+    }
+
+    modalidadFilter.addEventListener("input", applyFilters);
+    nivelFilter.addEventListener("input", applyFilters);
+    programaFilter.addEventListener("input", applyFilters);
+    municipioFilter.addEventListener("input", applyFilters);
+    departamentoFilter.addEventListener("input", applyFilters);
 
     reporteSelector.addEventListener("change", actualizarReporte);
-    tipoGraficoSelector.addEventListener("change", actualizarReporte);
-
     actualizarReporte();
+
+    // Función para exportar el PDF usando autoTable
+    function exportPDF() {
+        const doc = new jsPDF();
+
+        const table = document.getElementById("reporteTable");
+
+        doc.autoTable({ 
+            html: '#reporteTable',
+            startY: 20, 
+            theme: 'grid', 
+            headStyles: { fillColor: [35, 48, 63], textColor: 255 }, 
+            bodyStyles: { textColor: [0, 0, 0] }
+        });
+
+        doc.save("Reporte.pdf");
+    }
+
+    function exportPDFAlternativo() {
+        const doc = new jsPDF();
+        const table = document.getElementById("reporteTable");
+
+        let tableData = [];
+        table.querySelectorAll("tr").forEach((row, index) => {
+            if (index > 0) { 
+                let rowData = [];
+                row.querySelectorAll("td").forEach(td => {
+                    rowData.push(td.textContent);
+                });
+                tableData.push(rowData);
+            }
+        });
+
+        doc.autoTable({
+            head: [['Modalidad', 'Nivel Académico / Nivel de Formación', 'Programas', 'Municipio', 'Departamento']],
+            body: tableData,
+            startY: 20,
+            theme: 'grid',
+            headStyles: { fillColor: [35, 48, 63], textColor: 255 },
+            bodyStyles: { textColor: [0, 0, 0] }
+        });
+
+        doc.save("Reporte_Alternativo.pdf");
+    }
 </script>
+
 <?php
 require_once "./views/components/footer.php";
 ?>

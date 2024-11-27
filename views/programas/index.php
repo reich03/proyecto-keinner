@@ -7,7 +7,21 @@ $totalProgramas = count($this->d['programas']);
 $totalPaginas = ceil($totalProgramas / $programasPorPagina);
 
 $inicio = ($paginaActual - 1) * $programasPorPagina;
-$programasPagina = array_slice($this->d['programas'], $inicio, $programasPorPagina);
+
+$busqueda = isset($_GET['busqueda']) ? $_GET['busqueda'] : '';
+
+if ($busqueda != '') {
+    $programasFiltrados = array_filter($this->d['programas'], function ($programa) use ($busqueda) {
+        return stripos($programa['snies'], $busqueda) !== false || stripos($programa['nomb_programa'], $busqueda) !== false;
+    });
+} else {
+    $programasFiltrados = $this->d['programas'];
+}
+
+$totalProgramas = count($programasFiltrados);
+$totalPaginas = ceil($totalProgramas / $programasPorPagina);
+
+$programasPagina = array_slice($programasFiltrados, $inicio, $programasPorPagina);
 
 $rango = 2;
 $inicioRango = max(1, $paginaActual - $rango);
@@ -18,6 +32,16 @@ $finRango = min($totalPaginas, $paginaActual + $rango);
     <div class="container mx-auto max-w-8xl bg-white shadow-xl rounded-lg p-8 border border-gray-200">
         <h1 class="text-4xl font-extrabold text-blue-600 text-center mb-6">Lista de Programas Académicos</h1>
 
+        <div class="mb-4">
+            <form action="" method="GET" class="flex items-center space-x-2">
+                <input type="text" name="busqueda" id="busqueda" placeholder="Buscar por SNIES o nombre"
+                       value="<?php echo isset($_GET['busqueda']) ? $_GET['busqueda'] : ''; ?>"
+                       class="px-4 py-2 border rounded-md w-80" />
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    Buscar
+                </button>
+            </form>
+        </div>
         <div class="overflow-x-auto mb-6">
             <table class="table-auto w-full bg-white shadow-md rounded overflow-hidden">
                 <thead class="bg-blue-600 text-white">
@@ -144,7 +168,8 @@ $finRango = min($totalPaginas, $paginaActual + $rango);
                         'El programa ha sido eliminado correctamente.',
                         'success'
                     ).then(() => {
-                        document.querySelector(`tr[data-snies='${snies}']`).remove();
+                        const row = document.querySelector(`tr[data-snies='${snies}']`);
+                        if (row) row.remove();
                     });
                 } else {
                     Swal.fire(
@@ -157,68 +182,75 @@ $finRango = min($totalPaginas, $paginaActual + $rango);
             .catch(error => {
                 console.error('Error al eliminar el programa:', error);
                 Swal.fire(
-                        'Eliminado!',
-                        'El programa ha sido eliminado correctamente.',
-                        'success'
-                    ).then(() => {
-                        document.querySelector(`tr[data-snies='${snies}']`).remove();
-                    });
+                    'Eliminado!',
+                    'El programa ha sido eliminado correctamente.',
+                    'success'
+                ).then(() => {
+                    const row = document.querySelector(`tr[data-snies='${snies}']`);
+                    if (row) row.remove();
+                });
             });
     }
 
-
     function editarPrograma(snies) {
-    fetch(`http://localhost/ConsultSnies/programas/editar/${snies}`)
-        .then(response => response.json())
-        .then(programa => {
-           
+        fetch(`http://localhost/ConsultSnies/programas/editar/${snies}`)
+            .then(response => response.json())
+            .then(programa => {
 
-            Swal.fire({
-                title: 'Editar Programa',
-                html: `
-                    <input id="nomb_programa" class="swal2-input" value="${programa.nomb_programa}" placeholder="Nombre del programa">
-                    <input id="creditos" class="swal2-input" value="${programa.creditos}" placeholder="Créditos">
-                    <input id="semestres" class="swal2-input" value="${programa.semestres}" placeholder="Semestres">
-                    <input id="snies" type="hidden" value="${programa.snies}">  <!-- Para mantener el SNIES -->
-                `,
-                preConfirm: () => {
-                    return {
-                        nomb_programa: document.getElementById('nomb_programa').value,
-                        creditos: document.getElementById('creditos').value,
-                        semestres: document.getElementById('semestres').value,
-                        snies: document.getElementById('snies').value
-                    };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const data = result.value;
-                    console.log(data);
+                Swal.fire({
+                    title: 'Editar Programa',
+                    html: `
+                        <input id="nomb_programa" class="swal2-input" value="${programa.nomb_programa}" placeholder="Nombre del programa">
+                        <input id="creditos" class="swal2-input" value="${programa.creditos}" placeholder="Créditos">
+                        <input id="semestres" class="swal2-input" value="${programa.semestres}" placeholder="Semestres">
+                        <input id="snies" type="hidden" value="${programa.snies}">  <!-- Para mantener el SNIES -->
+                    `,
+                    preConfirm: () => {
+                        return {
+                            nomb_programa: document.getElementById('nomb_programa').value,
+                            creditos: document.getElementById('creditos').value,
+                            semestres: document.getElementById('semestres').value,
+                            snies: document.getElementById('snies').value
+                        };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const data = result.value;
+                        console.log(data);
 
-                    fetch('http://localhost/ConsultSnies/programas/editar', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(data)
-                        })
-                        .then(response => response.json())
-                        .then(response => {
-                            if (response.success) {
-                                Swal.fire('Éxito', 'Programa actualizado correctamente', 'success');
-                            } else {
-                                Swal.fire('Error', 'Hubo un problema al actualizar el programa', 'error');
-                            }
-                        });
-                }
+                        fetch('http://localhost/ConsultSnies/programas/edicionData', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            .then(response => response.json())
+                            .then(response => {
+                                if (response.success) {
+                                    Swal.fire('Éxito', 'Programa actualizado correctamente', 'success')
+                                    .then(() => {
+                                        const row = document.querySelector(`tr[data-snies='${snies}']`);
+                                        if (row) {
+                                            row.querySelector('td:nth-child(2)').textContent = data.nomb_programa;
+                                            row.querySelector('td:nth-child(4)').textContent = data.creditos;
+                                            row.querySelector('td:nth-child(5)').textContent = data.semestres;
+                                        }
+                                    });
+                                } else {
+                                    Swal.fire('Error', 'Hubo un problema al actualizar el programa', 'error');
+                                }
+                            });
+                    }
+                })
+            })
+            .catch(error => {
+                console.error('Error al cargar el programa:', error);
+                Swal.fire('Error', 'No se pudo cargar el programa para editarlo', 'error');
             });
-        })
-        .catch(error => {
-            console.error('Error al cargar el programa:', error);
-            Swal.fire('Error', 'No se pudo cargar el programa para editarlo', 'error');
-        });
-}
-
+    }
 </script>
+
 <?php
 require_once "./views/components/footer.php";
 ?>

@@ -329,18 +329,19 @@ class ProgramasModel extends Model
 
     function getProgramBySnies($snies)
     {
-        error_log('El valor de snies recibido es: ' . $snies);
+        error_log('El valor de snies recibido es: ' . var_export($snies, true));
         try {
             if (empty($snies)) {
                 throw new Exception('SNIES no proporcionado');
             }
-    
+
             if (is_array($snies)) {
-                $snies = $snies[0]; 
+                $snies = $snies[0];
             }
-    
-            $query = $this->query("SELECT * FROM programas WHERE snies = ?");
-            $query->execute([$snies]);
+
+            error_log('Valor de SNIES para consulta SQL: ' . $snies);
+
+            $query = $this->query("SELECT * FROM programas WHERE snies = '$snies'");
             return $query->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log('ProgramasModel::getProgramBySnies -> Error: ' . $e->getMessage());
@@ -350,55 +351,43 @@ class ProgramasModel extends Model
             return null;
         }
     }
-    
 
 
-    function updateProgram($data)
-    {
-        $db = $this->db->connect();
-        try {
-            $stmt = $db->prepare("
-            UPDATE programas SET
-                nomb_programa = ?, 
-                cod_estado = ?, 
-                cod_inst = ?, 
-                cod_munic = ?, 
-                cod_modalidad = ?, 
-                cod_academ = ?, 
-                cod_nivel_formacion = ?, 
-                creditos = ?, 
-                semestres = ?, 
-                periodicidad = ?, 
-                codigo_anterior_icfes = ?, 
-                cod_tipo_reconocimiento = ?, 
-                fecha_resolucion = ?, 
-                fecha_ejecutoria = ?, 
-                vigencia = ?
-            WHERE snies = ?
-        ");
-            return $stmt->execute([
-                $data['nomb_programa'],
-                $data['cod_estado'],
-                $data['cod_inst'],
-                $data['cod_munic'],
-                $data['cod_modalidad'],
-                $data['cod_academ'],
-                $data['cod_nivel_formacion'],
-                $data['creditos'],
-                $data['semestres'],
-                $data['periodicidad'],
-                $data['codigo_anterior_icfes'],
-                $data['cod_tipo_reconocimiento'],
-                $data['fecha_resolucion'],
-                $data['fecha_ejecutoria'],
-                $data['vigencia'],
-                $data['snies']
-            ]);
-        } catch (PDOException $e) {
-            error_log('ProgramasModel::updateProgram -> Error: ' . $e->getMessage());
-            return false;
+
+    public function updateProgram($data)
+{
+    error_log("La data para actualizar: " . var_export($data, true));
+
+    $db = $this->db->connect();
+    try {
+        $fields = [];
+        $params = [];
+
+        if (!empty($data['nomb_programa'])) {
+            $fields[] = 'nomb_programa = ?';
+            $params[] = $data['nomb_programa'];
         }
+        if (!empty($data['creditos'])) {
+            $fields[] = 'creditos = ?';
+            $params[] = $data['creditos'];
+        }
+        if (!empty($data['semestres'])) {
+            $fields[] = 'semestres = ?';
+            $params[] = $data['semestres'];
+        }
+
+        $fieldsString = implode(", ", $fields);
+        $params[] = $data['snies'];  
+
+        $stmt = $db->prepare("UPDATE programas SET $fieldsString WHERE snies = ?");
+        return $stmt->execute($params);
+    } catch (PDOException $e) {
+        error_log('ProgramasModel::updateProgram -> Error: ' . $e->getMessage());
+        return false;
     }
+}
+
+
 
     public function deleteProgram($snies)
     {

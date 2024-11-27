@@ -88,7 +88,12 @@ class Programas extends Controller
 
     public function editar($snies)
     {
-        error_log('Valor de SNIES recibido en el controlador: ' . $snies[0]);  
+        if (is_array($snies)) {
+            $snies = $snies[0];
+        }
+    
+        error_log('Valor de SNIES recibido en el controlador: ' . $snies);  
+        
         try {
             $programa = $this->model->getProgramBySnies($snies);  
             if ($programa) {
@@ -101,10 +106,33 @@ class Programas extends Controller
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
-    
     }
     
-
+    
+    public function edicionData()
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if (empty($data['snies'])) {
+            echo json_encode(['success' => false, 'error' => 'SNIES no proporcionado']);
+            exit;
+        }
+    
+        try {
+            $result = $this->model->updateProgram($data);
+            
+            if ($result) {
+                echo json_encode(['success' => true]);
+            } else {
+                throw new Exception('Error al actualizar el programa');
+            }
+        } catch (Exception $e) {
+            error_log('Programas::editar -> Error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+    
     public function eliminar($snies)
     {
         try {
