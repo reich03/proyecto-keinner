@@ -86,27 +86,24 @@ class Programas extends Controller
         }
     }
 
-    public function editar()
+    public function editar($snies)
     {
+        error_log('Valor de SNIES recibido en el controlador: ' . $snies[0]);  
         try {
-            $data = json_decode(file_get_contents('php://input'), true);
-            error_log('el valor de la data es:' . $data);
-            if (!$data || !isset($data['snies'])) {
-                throw new Exception('Datos inválidos.');
-            }
-
-            $result = $this->model->updateProgram($data[0]);
-            if ($result) {
-                echo json_encode(['success' => true]);
+            $programa = $this->model->getProgramBySnies($snies);  
+            if ($programa) {
+                echo json_encode($programa); 
             } else {
-                throw new Exception('Error al actualizar el programa.');
+                throw new Exception('Programa no encontrado.');
             }
         } catch (Exception $e) {
             error_log('Programas::editar -> Error: ' . $e->getMessage());
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
+    
     }
+    
 
     public function eliminar($snies)
     {

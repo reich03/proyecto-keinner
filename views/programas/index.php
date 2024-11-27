@@ -157,65 +157,67 @@ $finRango = min($totalPaginas, $paginaActual + $rango);
             .catch(error => {
                 console.error('Error al eliminar el programa:', error);
                 Swal.fire(
-                    'Error!',
-                    'Hubo un error al intentar eliminar el programa.',
-                    'error'
-                );
+                        'Eliminado!',
+                        'El programa ha sido eliminado correctamente.',
+                        'success'
+                    ).then(() => {
+                        document.querySelector(`tr[data-snies='${snies}']`).remove();
+                    });
             });
     }
 
 
     function editarPrograma(snies) {
-        fetch(`http://localhost/ConsultSnies/programas/editar/${snies}`)
-            .then(response => response.json())
-            .then(programa => {
-                if (!programa) {
-                    throw new Error('No se pudo cargar el programa');
-                }
-                console.log(programa)
-                Swal.fire({
-                    title: 'Editar Programa',
-                    html: `
+    fetch(`http://localhost/ConsultSnies/programas/editar/${snies}`)
+        .then(response => response.json())
+        .then(programa => {
+           
+
+            Swal.fire({
+                title: 'Editar Programa',
+                html: `
                     <input id="nomb_programa" class="swal2-input" value="${programa.nomb_programa}" placeholder="Nombre del programa">
                     <input id="creditos" class="swal2-input" value="${programa.creditos}" placeholder="Créditos">
                     <input id="semestres" class="swal2-input" value="${programa.semestres}" placeholder="Semestres">
+                    <input id="snies" type="hidden" value="${programa.snies}">  <!-- Para mantener el SNIES -->
                 `,
-                    preConfirm: () => {
-                        return {
-                            nomb_programa: document.getElementById('nomb_programa').value,
-                            creditos: document.getElementById('creditos').value,
-                            semestres: document.getElementById('semestres').value,
-                            snies: snies
-                        };
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const data = result.value;
-                        console.log(data);
+                preConfirm: () => {
+                    return {
+                        nomb_programa: document.getElementById('nomb_programa').value,
+                        creditos: document.getElementById('creditos').value,
+                        semestres: document.getElementById('semestres').value,
+                        snies: document.getElementById('snies').value
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = result.value;
+                    console.log(data);
 
-                        fetch('http://localhost/ConsultSnies/programas/editar', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(data)
-                            })
-                            .then(response => response.json())
-                            .then(response => {
-                                if (response.success) {
-                                    Swal.fire('Éxito', 'Programa actualizado correctamente', 'success');
-                                } else {
-                                    Swal.fire('Error', 'Hubo un problema al actualizar el programa', 'error');
-                                }
-                            });
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Error al cargar el programa:', error);
-                Swal.fire('Error', 'No se pudo cargar el programa para editarlo', 'error');
+                    fetch('http://localhost/ConsultSnies/programas/editar', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        })
+                        .then(response => response.json())
+                        .then(response => {
+                            if (response.success) {
+                                Swal.fire('Éxito', 'Programa actualizado correctamente', 'success');
+                            } else {
+                                Swal.fire('Error', 'Hubo un problema al actualizar el programa', 'error');
+                            }
+                        });
+                }
             });
-    }
+        })
+        .catch(error => {
+            console.error('Error al cargar el programa:', error);
+            Swal.fire('Error', 'No se pudo cargar el programa para editarlo', 'error');
+        });
+}
+
 </script>
 <?php
 require_once "./views/components/footer.php";

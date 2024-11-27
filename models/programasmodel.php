@@ -327,18 +327,31 @@ class ProgramasModel extends Model
         }
     }
 
-
     function getProgramBySnies($snies)
     {
+        error_log('El valor de snies recibido es: ' . $snies);
         try {
+            if (empty($snies)) {
+                throw new Exception('SNIES no proporcionado');
+            }
+    
+            if (is_array($snies)) {
+                $snies = $snies[0]; 
+            }
+    
             $query = $this->query("SELECT * FROM programas WHERE snies = ?");
             $query->execute([$snies]);
             return $query->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             error_log('ProgramasModel::getProgramBySnies -> Error: ' . $e->getMessage());
             return null;
+        } catch (Exception $e) {
+            error_log('Error en la función getProgramBySnies: ' . $e->getMessage());
+            return null;
         }
     }
+    
+
 
     function updateProgram($data)
     {
