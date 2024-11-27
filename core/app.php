@@ -5,12 +5,15 @@ class App
 {
     function __construct()
     {
+
+        //http://localhost/ConsultSnies/
         $url = isset($_GET['url']) ? $_GET['url'] : null;
         $url = rtrim($url, '/');
         $url = explode('/', $url);
 
         require_once('controllers/errores.php');
 
+        //si la url es la raiz carga al controlador main, y este se instancia y se ejecuta su metodo render y loadModel para cargar su vista y su modelo
         if (empty($url[0])) {
             error_log('APP::construct->No hay controlador Especificado');
             $archivoController = "controllers/main.php";

@@ -10,9 +10,8 @@
         <div class="text-center">
             <h3 class="text-lg font-bold text-white mb-4">Enlaces Rápidos</h3>
             <ul class="space-y-2">
-                <li><a href="/programas" class="hover:text-blue-400 transition">Consultar Programas</a></li>
-                <li><a href="/reportes" class="hover:text-blue-400 transition">Generar Reportes</a></li>
-                <li><a href="/ayuda" class="hover:text-blue-400 transition">Ayuda</a></li>
+                <li><a href="<?php echo constant('URL'); ?>/programas" class="hover:text-blue-400 transition">Consultar Programas</a></li>
+                <li><a href="<?php echo constant('URL'); ?>/reportes" class="hover:text-blue-400 transition">Generar Reportes</a></li>
             </ul>
         </div>
 

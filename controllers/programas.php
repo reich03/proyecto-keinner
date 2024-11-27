@@ -86,6 +86,47 @@ class Programas extends Controller
         }
     }
 
+    public function editar()
+    {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            error_log('el valor de la data es:' . $data);
+            if (!$data || !isset($data['snies'])) {
+                throw new Exception('Datos inválidos.');
+            }
+
+            $result = $this->model->updateProgram($data[0]);
+            if ($result) {
+                echo json_encode(['success' => true]);
+            } else {
+                throw new Exception('Error al actualizar el programa.');
+            }
+        } catch (Exception $e) {
+            error_log('Programas::editar -> Error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    public function eliminar($snies)
+    {
+        try {
+
+            error_log('el valor desde el controlador' . var_dump($snies));
+            $result = $this->model->deleteProgram($snies[0]);
+            if ($result) {
+                echo json_encode(['success' => true]);
+            } else {
+                throw new Exception('Error al eliminar el programa.');
+            }
+        } catch (Exception $e) {
+            error_log('Programas::eliminar -> Error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+
 
     private function isValidExcelFile($file)
     {

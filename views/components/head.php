@@ -32,7 +32,6 @@
                     <li><a href="/ConsultSnies/programas" class="hover:text-blue-300 transition-all duration-300">Programas</a></li>
                     <li><a href="/ConsultSnies/programas/carga" class="hover:text-blue-300 transition-all duration-300">Cargar Programas</a></li>
                     <li><a href="/ConsultSnies/reportes" class="hover:text-blue-300 transition-all duration-300">Reportes</a></li>
-                    <li><a href="/ConsultSnies/ayuda" class="hover:text-blue-300 transition-all duration-300">Ayuda</a></li>
                 </ul>
             </nav>
 
@@ -45,12 +44,10 @@
 
         <div id="mobile-menu" class="hidden bg-blue-700 md:hidden">
             <ul class="flex flex-col space-y-4 p-4">
-                <li><a href="/ConsultSnies" class="hover:text-blue-300 transition-all duration-300">Inicio</a></li>
                 <li><a href="<?php echo constant('URL'); ?>programas" class="hover:text-blue-300 transition-all duration-300">Programas</a></li>
                 <li><a href="/programas/carga" class="hover:text-blue-300 transition-all duration-300">Cargar Programas<< /a>
                 </li>
-                <li><a href="/reportes" class="hover:text-blue-300 transition-all duration-300">Reportes</a></li>
-                <li><a href="/ayuda" class="hover:text-blue-300 transition-all duration-300">Ayuda</a></li>
+                <li><a href="/ConsultSnies/reportes" class="hover:text-blue-300 transition-all duration-300">Reportes</a></li>
             </ul>
         </div>
     </header>
